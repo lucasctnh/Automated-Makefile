@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdbool.h>
 #include <windows.h>
 #include <stdint.h>
@@ -6,6 +7,7 @@
 #include <string.h>
 
 void HandleChangeEvent(FILE_NOTIFY_INFORMATION *event);
+void LiterallyMakefile(WCHAR *filename);
 
 int main() {
 
@@ -66,10 +68,13 @@ int main() {
 
 void HandleChangeEvent(FILE_NOTIFY_INFORMATION* event)
 {
-    DWORD name_len;//, name;
+    DWORD name_len;
+
+	WCHAR* name;
 
     name_len = (event->FileNameLength / sizeof(wchar_t)) - 2; // -2 for filename without extension
-	// name = (int)event->FileName;
+	name = event->FileName;
+	name[name_len] = '\0';
 
     switch (event->Action)
     {
@@ -81,10 +86,9 @@ void HandleChangeEvent(FILE_NOTIFY_INFORMATION* event)
         break;
     case FILE_ACTION_MODIFIED:
         // wprintf(L"	 Modified: %.*s\n", name_len, event->FileName);
-		wprintf(L"%s\n", event->FileName);
 
 		// Call the especial function to create our Makefile
-		//LiterallyMakefile()
+		LiterallyMakefile(name);
 
         break;
     case FILE_ACTION_RENAMED_OLD_NAME:
@@ -97,4 +101,49 @@ void HandleChangeEvent(FILE_NOTIFY_INFORMATION* event)
         printf("Unknown action!\n");
         break;
     }
+}
+
+void LiterallyMakefile(WCHAR* filename) {
+	wprintf(L"%s\n", filename);
+	HANDLE nMkfl;
+	DWORD bytesWritten;
+
+	char strPart1[] = "# Name of the project\nPROJ_NAME=";
+	char strPart3[] = "\nPROJ_EXE=$(PROJ_NAME).exe\n# Allegro inclusion\nALLEGRO_VERSION=5.0.10\nMINGW_VERSION=4.7.0\nFOLDER=C:\\Users\\coutl\\Coding\\C\n\nFOLDER_NAME=\\allegro-$(ALLEGRO_VERSION)-mingw-$(MINGW_VERSION)\nPATH_ALLEGRO=$(FOLDER)$(FOLDER_NAME)\nLIB_ALLEGRO=\\lib\\liballegro-$(ALLEGRO_VERSION)-monolith-mt.a\nINCLUDE_ALLEGRO=\\include\n\n# .c file\nC_SOURCE=$(PROJ_NAME).c\n\n# Object file\nOBJ=$(C_SOURCE:.c=.o)\n\n# Compiler\nCC=gcc\n\n#\n# Compilation and linking\n#\nall: $(PROJ_EXE)\n\n$(PROJ_EXE): $(OBJ)\n	$(CC) -o $@ $^ $(PATH_ALLEGRO)$(LIB_ALLEGRO)\n\n$(OBJ): $(C_SOURCE)\n	$(CC) -I $(PATH_ALLEGRO)$(INCLUDE_ALLEGRO) -c $<\n\nclean:\n	del *.o *.exe\n";
+
+	// Convert wchar pointer to char pointer
+	printf("%s", filename);
+	char part2Convert[32];
+	wcstombs(part2Convert, filename, sizeof(part2Convert));
+	printf("%s", filename);
+
+	strcat(strPart1, part2Convert);
+	strcat(strPart1, strPart3);
+
+	printf("%d", sizeof(strPart1));
+
+	nMkfl = CreateFile(
+		"C:\\Users\\coutl\\Coding\\C\\Script\\Makefile",
+		GENERIC_READ | GENERIC_WRITE,
+		FILE_SHARE_READ,
+		NULL,
+		CREATE_ALWAYS,
+		FILE_ATTRIBUTE_NORMAL,
+		NULL
+	);
+
+	if(nMkfl == INVALID_HANDLE_VALUE) {
+		MessageBox(NULL, "Failed to create Makefile.", "Error", MB_OK);
+	}
+
+   WriteFile(
+    	nMkfl,
+		strPart1,
+    	sizeof(strPart1),
+    	&bytesWritten,
+    	NULL
+	);
+
+   // Close the handle once we don't need it.
+   CloseHandle(nMkfl);
 }
