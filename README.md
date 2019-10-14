@@ -1,4 +1,4 @@
-# Automated Makefile script
+# Automated Makefile
 
 This project is a directory watcher to automate the process of creating Makefiles for Allegro projects, it can be easily adapted to fulfill other purposes though.
 
