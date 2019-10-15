@@ -2,3 +2,4 @@
 
 !.gitignore
 !auto-mkfl.c
+!mk-clean.c
